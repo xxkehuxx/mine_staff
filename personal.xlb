@@ -1,0 +1,273 @@
+Option Explicit
+
+Sub SelectbyValue()
+    Dim cell As Object
+    Dim FoundCells As Range
+    Dim WorkRange As Range
+    
+    If TypeName(Selection) <> "Range" Then Exit Sub
+    
+'   Check all or selection?
+    If Selection.CountLarge = 1 Then
+        Set WorkRange = ActiveSheet.UsedRange
+    Else
+       Set WorkRange = Application.Intersect(Selection, ActiveSheet.UsedRange)
+    End If
+    
+'   Reduce the search to numeric cells only
+    On Error Resume Next
+    Set WorkRange = WorkRange.SpecialCells(xlConstants, xlNumbers)
+    If WorkRange Is Nothing Then Exit Sub
+    On Error GoTo 0
+    WorkRange.Cells.Select
+        Selection.NumberFormat = "#,##0.0;-#,##0.0;-"
+    
+End Sub
+
+Sub Number_Format()
+    If TypeName(Selection) <> "Range" Then Exit Sub
+    Selection.NumberFormat = "#,##0.0;-#,##0.0;-"
+    Selection.HorizontalAlignment = xlCenter
+    Selection.WrapText = False 'Text wrap True/False
+End Sub
+
+Sub SetUp_NiceView()
+
+' Helper function to print table
+Sub PrintTable(r As Range, res() As Double)
+    
+    Dim x As Double
+    Dim i As Integer
+    ' Print the table
+    For i = 0 To 10
+        With r
+            .Offset(i, 2).Value = x
+            .Offset(i, 3).Value = 1 - x
+            .Offset(i, 4).Value = res(i, 0)
+            .Offset(i, 5).Value = res(i, 1)
+        End With
+        x = x + 0.1
+    Next i
+    
+    ' Format cells
+    Range(r.Cells(1, 3), r.Cells(11, 4)).NumberFormat = "0.0"
+    Range(r.Cells(1, 5), r.Cells(11, 6)).NumberFormat = "0.00%"
+End Sub
+
+' Helper function to print graph
+Sub PlotGraph(yr As Range, xr As Range, res() As Double)
+    
+    ' Remove graph if it's already there
+    If Charts.Count > 0 Then Charts(1).Delete
+    ' Add a new chart just after Sheet1
+    Charts.Add After:=Worksheets("Ex 20.1")
+    ' Set various attributes
+    With ActiveChart
+        .HasLegend = False
+        .ChartType = xlXYScatterSmooth
+        .Location Where:=xlLocationAsNewSheet
+        .HasTitle = True
+        .ChartTitle.Characters.Text = "Diagram"
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "E(r)"
+        .SetSourceData Source:=xr
+        .SeriesCollection(1).XValues = xr
+        .SeriesCollection(1).Values = yr
+    End With
+End Sub
+
+' Calculating investment return on a portfolio
+Sub InvestmentReturn()
+    Dim erA As Double
+    Dim erB As Double
+    Dim erP As Double
+    Dim sA As Double
+    Dim sB As Double
+    Dim sP As Double
+    Dim rAB As Double
+    Dim r As Range
+    Dim xr As Range
+    Dim yr As Range
+    Dim x As Double
+    Dim i As Double
+    Dim res(10, 1) As Double
+    
+    ' Activate worksheet
+    Worksheets("Ex 20.1").Activate
+    
+    ' Set ranges
+    Set r = Range("B4")             ' Start of input
+    Set xr = Range("G4:G14")        ' Range for x-values
+    Set yr = Range("F4:F14")        ' Range for y-values
+    
+    ' Read data from worksheet
+    With r
+        erA = .Cells(1, 1).Value
+        erB = .Cells(2, 1).Value
+        sA = .Cells(3, 1).Value
+        sB = .Cells(4, 1).Value
+        rAB = .Cells(5, 1).Value
+    
+        ' Calculate return
+        For i = 0 To 10
+            res(i, 0) = x * erA + (1 - x) * erB
+            res(i, 1) = Sqr(x ^ 2 * sA ^ 2 + (1 - x) ^ 2 * _
+                        sB ^ 2 + 2 * x * (1 - x) * rAB * sA * sB)
+            x = x + 0.1
+        Next i
+        
+        ' Print the table
+        PrintTable r, res
+        
+        ' Plot the graph
+        PlotGraph yr, xr, res
+       
+    End With
+    
+End Sub
+
+
+
+    Dim rowLast         As Long
+    Dim colLast         As Integer
+    Dim i               As Integer
+
+    Const maxColWidth   As Double = 35.86 ' 256 pixels
+    
+    ActiveWindow.DisplayGridlines = False
+    Cells.Select
+    Selection.WrapText = False
+    
+    With ActiveSheet
+         On Error Resume Next
+        .ShowAllData
+        .Cells.EntireRow.Hidden = False
+        .Cells.EntireColumn.Hidden = False
+        .Cells.EntireRow.AutoFit
+        .Cells.Font.Color = RGB(0, 0, 0)
+        .Cells.Font.Size = 8
+        .Cells.Font.Name = "Calibri"
+        .Cells.NumberFormat = "#,##0.00;(#,##0.00);-"
+        .Cells.VerticalAlignment = xlCenter
+        .Cells.HorizontalAlignment = xlCenter
+        .Columns("A:B").HorizontalAlignment = xlLeft
+        On Error GoTo 0
+
+        On Error Resume Next
+        colLast = .Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+        rowLast = .Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+        On Error GoTo 0
+
+        If rowLast = 0 Or colLast = 0 Then Exit Sub
+
+        .Range(.Cells(1, 1), .Cells(1, colLast)).Font.Bold = True
+        .Range(.Cells(1, 1), .Cells(1, colLast)).Font.Color = 2706549
+        .Range(.Cells(1, 1), .Cells(1, colLast)).Interior.ColorIndex = 19
+
+        ActiveWindow.FreezePanes = False
+        Application.GoTo .Cells(3, 3), True
+        Application.Cells(3, 3).Select
+        ActiveWindow.ScrollRow = 1
+        ActiveWindow.ScrollColumn = 1
+        ActiveWindow.FreezePanes = True
+        .Cells(1, 1).Select
+
+        ' Disable AutoFilter if it's on
+        .AutoFilterMode = False
+
+        ' AutoFilter top row
+        With .Range(.Cells(2, 1), .Cells(rowLast, colLast))
+            .AutoFilter
+
+            ' AutoFit columns
+            .Columns.AutoFit
+
+            For i = 1 To colLast
+                If .Columns(i).ColumnWidth > maxColWidth Then
+                    .Columns(i).Cells(1).Columns.AutoFit
+
+                    If .Columns(i).ColumnWidth > maxColWidth Then
+                        .Columns(i).ColumnWidth = maxColWidth
+                    End If
+                End If
+            Next i
+        End With
+    End With
+
+End Sub
+
+Sub center_across()
+        With Selection
+        If .HorizontalAlignment = xlCenterAcrossSelection Then
+        .HorizontalAlignment = xlGeneral
+        Else
+        Selection.HorizontalAlignment = xlCenterAcrossSelection
+        End If
+    End With
+End Sub
+
+Sub RemoveHyperlinks()
+   ActiveSheet.Hyperlinks.Delete
+End Sub
+Sub RemoveComments()
+    Cells.ClearComments
+End Sub
+
+Sub HideColumnsFirstRow()
+    Dim rng As Range: Set rng = Application.Range("A1:AZ1")
+    Dim cell As Range
+    
+    Application.ScreenUpdating = False
+    
+    For Each cell In rng
+    If cell.Value = "" Then cell.EntireColumn.Hidden = True
+    Next cell
+    
+    Application.ScreenUpdating = True
+End Sub
+
+Sub UnhideRowsColumns()
+Columns.EntireColumn.Hidden = False
+Rows.EntireRow.Hidden = False
+End Sub
+
+Sub FilterSelectedValues()
+    Dim arrayEn() As Variant
+    Dim selCol As Integer
+    Dim rCell As Range
+    Dim i As Long
+
+    ReDim arrayEn(1 To 1, 1 To Selection.Count)
+    selCol = Selection.Column
+    i = 1
+
+    For Each rCell In Selection
+       arrayEn(1, i) = CStr(rCell.Value2)
+       i = i + 1
+    Next rCell
+
+    ActiveSheet.Range("A1").AutoFilter Field:=selCol, Criteria1:=arrayEn, Operator:=xlFilterValues
+End Sub
+
+Sub TableofContent()
+Dim i As Long
+On Error Resume Next
+Application.DisplayAlerts = False
+Worksheets("Table of Content").Delete
+Application.DisplayAlerts = True
+On Error GoTo 0
+ThisWorkbook.Sheets.Add Before:=ThisWorkbook.Worksheets(1)
+ActiveSheet.Name = "Table of Content"
+For i = 1 To Sheets.Count
+With ActiveSheet
+.Hyperlinks.Add _
+Anchor:=ActiveSheet.Cells(i, 1), _
+Address:="", _
+SubAddress:="'" & Sheets(i).Name & "'!A1", _
+ScreenTip:=Sheets(i).Name, _
+TextToDisplay:=Sheets(i).Name
+End With
+Next i
+End Sub
+
+
